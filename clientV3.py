@@ -12,7 +12,7 @@ from Crypto.Hash import SHA256
 import base64
 
 SERVER_IP = '127.0.0.1'
-SERVER_PORT = 12345
+SERVER_PORT = 12346
 MSS = 1000
 TIMEOUT = 3  # Initial timeout value
 WINDOW_SIZE = 3 * MSS

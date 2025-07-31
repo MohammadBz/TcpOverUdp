@@ -13,7 +13,7 @@ import base64
 
 # Constants
 SERVER_IP = '127.0.0.1'
-SERVER_PORT = 12345
+SERVER_PORT = 12346
 MSS = 1000
 BACKLOG = 5
 CONNECTION_CLEANUP_INTERVAL = 10
@@ -27,7 +27,6 @@ FLAG_ACK = 'ACK'
 FLAG_FIN = 'FIN'
 FLAG_RST = 'RST'
 
-
 def log_packet(context, direction, pkt):
     print(f"[{context}] {direction} packet:")
     print(f"  Source Port:        {pkt.src_port}")
@@ -38,31 +37,25 @@ def log_packet(context, direction, pkt):
     print(f"  Payload:            {pkt.payload if pkt.payload else '(empty)'}")
     print(f"  Receiver Window:    {pkt.recv_window}")
 
-
 def seq_lt(a, b):
     """Check if sequence number a is less than b, considering wrap-around"""
     return ((a < b) and (b - a < MAX_SEQ // 2)) or ((a > b) and (a - b > MAX_SEQ // 2))
-
 
 def seq_lte(a, b):
     """Check if sequence number a is less than or equal to b, considering wrap-around"""
     return a == b or seq_lt(a, b)
 
-
 def seq_gt(a, b):
     """Check if sequence number a is greater than b, considering wrap-around"""
     return seq_lt(b, a)
-
 
 def seq_gte(a, b):
     """Check if sequence number a is greater than or equal to b, considering wrap-around"""
     return a == b or seq_gt(a, b)
 
-
 def seq_add(a, b):
     """Add two sequence numbers with wrap-around"""
     return (a + b) % (MAX_SEQ + 1)
-
 
 def seq_sub(a, b):
     """Subtract sequence numbers with wrap-around"""
@@ -76,7 +69,7 @@ class EncryptionHelper:
         :param key: 32-byte encryption key (for AES-256)
         """
         if len(key) != 32:
-            raise ValueError("AES key must be 32 bytes long")
+                raise ValueError("AES key must be 32 bytes long")
         self.key = key
 
     def encrypt(self, plaintext):
@@ -255,7 +248,7 @@ class Connection:
         self.rto = self.estimated_rtt + 4 * max(self.dev_rtt, 0.01)  # Ensure positive
 
         # Enforce min/max bounds (RFC 6298)
-        self.rto = max(1.0, min(self.rto, 60.0))
+       # self.rto = max(1.0, min(self.rto, 60.0))
         print(f"[Server] Updated RTO: {self.rto:.3f}s (EstRTT: {self.estimated_rtt:.3f}s, DevRTT: {self.dev_rtt:.3f}s)")
 
     def send_data(self, data):
@@ -689,13 +682,9 @@ class TcpOverUdpServer:
                 else:
 
                     if FLAG_SYN in pkt.flags:
-
                         # Create ECDH object for this handshake
-
                         ecdh = ECDHHelper()
-
                         start_time = time.time()
-
                         seq = random.randint(10000, 50000)
 
                         ack = pkt.seq + 1
@@ -762,32 +751,32 @@ if __name__ == '__main__':
                     if encrypted_data:
                         try:
                             decrypted = conn.encryptor.decrypt(encrypted_data)
-                            print(f"[SERVER] Received decrypted message: {decrypted}")
+                            print(f"[SERVER] Received from {addr}: {decrypted}")
 
                             # Send encrypted response
-                            response = f"Server received your message: '{decrypted}'"
+                            response = f"Server received your : '{decrypted}'"
                             conn.send_data(response)
-                            print("[SERVER] Sent encrypted response")
+                            print(f"[SERVER] Sent response to {addr}")
                             conn.response_sent.set()
 
                         except Exception as e:
                             print(f"[SERVER] Decryption failed: {e}")
                             conn.abort()
                     else:
-                        print("[SERVER] No data received within timeout")
+                        print(f"[SERVER] No data from {addr} within timeout")
 
                     # Wait for client to initiate closure
                     print(f"[SERVER] Waiting for client closure from {addr}...")
                     start_time = time.time()
-                    while time.time() - start_time < 10.0:  # Wait up to 10 seconds
+                    while time.time() - start_time < 15.0:  # Wait up to 15 seconds
                         if conn.fin_received:
-                            print(f"[SERVER] Client initiated closure")
+                            print(f"[SERVER] Client {addr} initiated closure")
                             break
                         time.sleep(0.1)
 
                     # If client hasn't closed, send FIN (fallback)
                     if not conn.fin_received:
-                        print(f"[SERVER] Client didn't close, initiating closure")
+                        print(f"[SERVER] Client {addr} didn't close, initiating closure")
                         fin_pkt = Packet(
                             SERVER_PORT, addr[1],
                             conn.send_seq, conn.expected_seq,
@@ -808,7 +797,7 @@ if __name__ == '__main__':
                         time.sleep(0.1)
 
                 except Exception as e:
-                    print(f"[SERVER] Connection handler error: {e}")
+                    print(f"[SERVER] Connection handler error for {addr}: {e}")
                 finally:
                     # Clean up connection
                     conn.running = False
